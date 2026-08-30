@@ -12,7 +12,8 @@
     "test:game": "node test/e2e.js",
     "test:accounts": "node test/accounts.js",
     "test:latency": "node test/latency.js",
-    "start:local": "node --env-file=.env server/index.js"
+    "start:local": "node --env-file=.env server/index.js",
+    "test:ratelimit": "node test/rate-limit.js"
   },
   "dependencies": {
     "express": "^4.19.2",

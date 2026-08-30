@@ -23,6 +23,7 @@ import {
   sweepRooms,
 } from './rooms.js';
 import * as db from './db.js';
+import { createFailureLimiter } from './rate-limit.js';
 
 const PORT = process.env.PORT || 3000;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -38,6 +39,14 @@ const RATE_BURST = 60;
 const RATE_REFILL_PER_SEC = 25;
 
 const app = express();
+
+// Render (and any host with a load balancer) puts one proxy in front, so
+// without this every request reports the proxy's address and the sign-in
+// limiter would treat all users as one — meaning one person's failures could
+// lock out everybody. Trusting exactly one hop makes req.ip the real client
+// and leaves the header unspoofable: a forged X-Forwarded-For gets the true
+// address appended after it, and that last entry is the one used.
+app.set('trust proxy', 1);
 
 // Cache hard in production; in development revalidate every time, otherwise an
 // edited stylesheet keeps serving from the browser cache.
@@ -64,23 +73,16 @@ app.get('/api/health', (_req, res) =>
 
 const MIN_PASSWORD = 6;
 
-// Signing in is the one place worth guessing at, and scrypt makes each attempt
-// cost real CPU — so cap attempts per address rather than let someone grind.
-const AUTH_ATTEMPTS = new Map(); // ip -> { count, resetAt }
-const AUTH_WINDOW_MS = 60_000;
-const AUTH_MAX_ATTEMPTS = 12;
+// Two limiters, because they stop different things. The address limiter stops
+// one machine grinding through many accounts; the username limiter stops a
+// spread-out attack on one account from many addresses. Both count failures
+// only, so ordinary use never trips them.
+const ipLimiter = createFailureLimiter({ max: 10, windowMs: 60_000 });
+const userLimiter = createFailureLimiter({ max: 5, windowMs: 15 * 60_000 });
 
-function authThrottled(req) {
-  const ip = req.ip || 'unknown';
-  const now = Date.now();
-  const entry = AUTH_ATTEMPTS.get(ip);
-  if (!entry || now > entry.resetAt) {
-    AUTH_ATTEMPTS.set(ip, { count: 1, resetAt: now + AUTH_WINDOW_MS });
-    return false;
-  }
-  entry.count += 1;
-  return entry.count > AUTH_MAX_ATTEMPTS;
-}
+const TOO_MANY = 'Too many failed attempts. Wait a few minutes.';
+
+const clientIp = (req) => req.ip || 'unknown';
 
 const bearer = (req) => String(req.get('authorization') || '').replace(/^Bearer\s+/i, '') || null;
 
@@ -98,7 +100,8 @@ function requireDb(res) {
 
 app.post('/api/signup', async (req, res) => {
   if (!requireDb(res)) return;
-  if (authThrottled(req)) return res.status(429).json({ error: 'Too many tries. Wait a minute.' });
+  const ip = clientIp(req);
+  if (ipLimiter.isBlocked(ip)) return res.status(429).json({ error: TOO_MANY });
 
   const username = String(req.body?.username || '').trim();
   const password = String(req.body?.password || '');
@@ -111,7 +114,13 @@ app.post('/api/signup', async (req, res) => {
 
   try {
     const { user, error } = await db.createUser(username, password);
-    if (error) return res.status(409).json({ error });
+    if (error) {
+      // A taken name is the one signup failure worth counting: repeated tries
+      // are how you would probe which accounts exist.
+      ipLimiter.recordFailure(ip);
+      return res.status(409).json({ error });
+    }
+    ipLimiter.clear(ip);
     res.json(await accountPayload(user, await db.startSession(user.id)));
   } catch (err) {
     console.error('[auth] signup failed:', err.message);
@@ -121,13 +130,26 @@ app.post('/api/signup', async (req, res) => {
 
 app.post('/api/signin', async (req, res) => {
   if (!requireDb(res)) return;
-  if (authThrottled(req)) return res.status(429).json({ error: 'Too many tries. Wait a minute.' });
-
+  const ip = clientIp(req);
   const username = String(req.body?.username || '').trim();
+  const handle = username.toLowerCase();
+
+  if (ipLimiter.isBlocked(ip) || userLimiter.isBlocked(handle)) {
+    return res.status(429).json({ error: TOO_MANY });
+  }
+
   const password = String(req.body?.password || '');
   try {
     const { user, error } = await db.signIn(username, password);
-    if (error) return res.status(401).json({ error });
+    if (error) {
+      ipLimiter.recordFailure(ip);
+      userLimiter.recordFailure(handle);
+      return res.status(401).json({ error });
+    }
+    // Signing in successfully clears both counters — a person who mistypes and
+    // then gets it right should not be closer to a lockout than before.
+    ipLimiter.clear(ip);
+    userLimiter.clear(handle);
     res.json(await accountPayload(user, await db.startSession(user.id)));
   } catch (err) {
     console.error('[auth] signin failed:', err.message);
@@ -445,7 +467,11 @@ const heartbeat = setInterval(() => {
 }, HEARTBEAT_MS);
 heartbeat.unref();
 
-const sweeper = setInterval(sweepRooms, 1000 * 60);
+const sweeper = setInterval(() => {
+  sweepRooms();
+  ipLimiter.prune();
+  userLimiter.prune();
+}, 1000 * 60);
 sweeper.unref();
 
 warmUp();

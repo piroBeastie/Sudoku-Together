@@ -46,9 +46,15 @@ credits both of you. Progress is stored for each signed-in player as they play,
 flushed every few seconds and immediately when someone leaves.
 
 Passwords are hashed with scrypt (Node's own crypto — no dependency) and never
-stored in the clear. Sign-in attempts are capped per address, and a wrong
-password and an unknown username return the same message so the form cannot be
-used to discover who has an account.
+stored in the clear. A wrong password and an unknown username return the same
+message, so the form cannot be used to discover who has an account.
+
+Failed sign-ins are capped two ways: per address, which stops one machine
+grinding through accounts, and per username, which stops a spread-out attack on
+one account. Only failures count and a success clears the slate, so mistyping
+your password and then getting it right leaves you no closer to a lockout.
+`trust proxy` is set to one hop, so behind a load balancer the limiter sees the
+real client rather than lumping everyone under the proxy's address.
 
 ## How a game works
 
@@ -174,6 +180,7 @@ playing: the room code, who is here, the clock, and the owner's skip button.
 server/
   index.js             HTTP + WebSocket server, auth endpoints, message routing
   db.js                accounts, solve counts, saved puzzles (Postgres)
+  rate-limit.js        failure counter behind the sign-in lockout
   rooms.js             room state, moves, chat, ownership (memory only)
   sudoku.js            generator, solver, uniqueness check, difficulty rating
   puzzle-pool.js       warm pool of ready puzzles  <- swap in an API here
@@ -183,6 +190,7 @@ public/
 test/
   e2e.js               drives two real clients through a whole game
   db.js                storage layer against a real in-process Postgres
+  rate-limit.js        sign-in lockout logic, with time injected
   accounts.js          sign-up, sign-in, stats and continue, end to end
   latency.js           measures move latency between two players
 Dockerfile             container image for any host that runs one
@@ -213,11 +221,15 @@ sleeping database delays only sign-in, never the game.
 
 ## Tests
 
-The storage layer runs against a real Postgres inside the test process, so no
-setup is needed:
+These two need nothing running — the storage layer runs against a real Postgres
+inside the test process, and the lockout logic has time injected:
 
 ```bash
 node test/db.js
+```
+
+```bash
+node test/rate-limit.js
 ```
 
 The others need the server running. For the account tests it must have a
