@@ -1,0 +1,16 @@
+# Render free tier: sleeps when idle, wakes on the next visit.
+#
+# Deliberately NOT kept awake by a pinger — the free plan's 750 instance-hours
+# are shared across your whole account, and pinging 24/7 would consume all of
+# them. Left to sleep, this only spends the hours you actually play.
+services:
+  - type: web
+    name: sudoku-together
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production

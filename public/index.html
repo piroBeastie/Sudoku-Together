@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f1efea" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#100f0e" media="(prefers-color-scheme: dark)" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>Sudoku Together</title>
+    <meta name="description" content="Solve sudoku puzzles with a friend, in real time." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css?v=14" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%2316150f'/><text x='50' y='72' font-size='62' font-family='sans-serif' font-weight='700' fill='%23f1efea' text-anchor='middle'>9</text></svg>"
+    />
+  </head>
+  <body>
+    <!-- ============================================================ lobby -->
+    <main id="lobby" class="lobby">
+      <div class="lobby-card">
+        <header class="lobby-head">
+          <div class="logo" aria-hidden="true">
+            <span>5</span><span>3</span><span>7</span><span>9</span>
+          </div>
+          <h1>Sudoku Together</h1>
+          <p class="tagline">One grid, two players.</p>
+        </header>
+
+        <label class="field">
+          <span class="field-label">Your name</span>
+          <input
+            id="nameInput"
+            type="text"
+            maxlength="16"
+            placeholder="Type your name"
+            autocomplete="nickname"
+            enterkeyhint="go"
+            spellcheck="false"
+          />
+        </label>
+
+        <div class="field">
+          <span class="field-label">Difficulty</span>
+          <div class="segmented" id="difficultyPicker" role="radiogroup" aria-label="Difficulty">
+            <button type="button" role="radio" data-difficulty="easy">Easy</button>
+            <button type="button" role="radio" data-difficulty="medium">Medium</button>
+            <button type="button" role="radio" data-difficulty="hard" aria-checked="true">
+              Hard
+            </button>
+          </div>
+        </div>
+
+        <button id="playBtn" class="btn btn-primary">Play</button>
+
+        <div class="divider"><span>or join with a code</span></div>
+
+        <form id="codeForm" class="code-row">
+          <input
+            id="codeInput"
+            type="text"
+            maxlength="5"
+            placeholder="ABC12"
+            autocapitalize="characters"
+            autocomplete="off"
+            enterkeyhint="go"
+            spellcheck="false"
+            aria-label="Room code"
+          />
+          <button type="submit" class="btn btn-ghost">Join</button>
+        </form>
+
+        <p id="lobbyError" class="lobby-error" role="alert" hidden></p>
+      </div>
+    </main>
+
+    <!-- ============================================================= game -->
+    <div id="game" class="game" hidden>
+      <header class="topbar">
+        <button id="backBtn" class="icon-btn" title="Leave room" aria-label="Leave room">←</button>
+
+        <button id="codeChip" class="code-chip" title="Copy invite link">
+          <span id="roomCode">—</span>
+          <span class="copy-hint">copy</span>
+        </button>
+
+        <div class="players" id="players"></div>
+
+        <span id="timer" class="timer">0:00</span>
+
+        <button id="nextBtn" class="next-btn" title="Skip to the next puzzle" aria-label="Next puzzle" hidden>
+          <span class="next-long">Next puzzle</span><span class="next-short" aria-hidden="true">↻</span>
+        </button>
+
+        <span id="connState" class="conn" data-state="connecting" title="Connecting"></span>
+      </header>
+
+      <div class="stage">
+        <section class="board-area">
+          <div class="board-wrap">
+            <div id="board" class="board" role="grid" aria-label="Sudoku grid"></div>
+            <div id="winOverlay" class="win-overlay" hidden>
+              <div class="win-card">
+                <h2>Solved</h2>
+                <p id="winFinisher" class="win-finisher">—</p>
+                <ul id="winScores" class="win-scores"></ul>
+                <p id="winDetail" class="win-detail">—</p>
+                <div id="winActions" class="win-actions" hidden>
+                  <button id="winNextBtn" class="btn btn-primary compact">New sudoku</button>
+                  <button id="winExitBtn" class="btn btn-secondary compact">Exit</button>
+                </div>
+                <p id="winWaiting" class="win-waiting" hidden></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pad">
+            <div class="digits" id="digits"></div>
+            <div class="tools">
+              <button id="eraseBtn" class="tool">
+                <span class="tool-icon">⌫</span><span class="tool-text">Erase</span>
+              </button>
+              <button id="chatBtn" class="tool chat-only" aria-expanded="false">
+                <span class="tool-icon">💬</span><span class="tool-text">Chat</span>
+                <span class="unread" id="unread" hidden></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Preview of an incoming message, shown above the chat button. -->
+          <div id="chatPeek" class="chat-peek" hidden>
+            <span class="peek-name" id="peekName"></span>
+            <span class="peek-text" id="peekText"></span>
+          </div>
+        </section>
+
+        <div id="sheetBackdrop" class="sheet-backdrop" hidden></div>
+
+        <aside class="chat-area" id="chatArea">
+          <div class="chat-head">
+            <span class="grabber" aria-hidden="true"></span>
+            <h2>Room chat</h2>
+            <button id="chatCloseBtn" class="icon-btn chat-only" aria-label="Close chat">✕</button>
+          </div>
+          <ol id="chatLog" class="chat-log" aria-live="polite"></ol>
+          <form id="chatForm" class="chat-form">
+            <input
+              id="chatInput"
+              type="text"
+              maxlength="400"
+              placeholder="Say something…"
+              autocomplete="off"
+              enterkeyhint="send"
+            />
+            <button type="submit" class="send-btn" aria-label="Send">↑</button>
+          </form>
+        </aside>
+      </div>
+    </div>
+
+    <!-- Celebration layer: lilies drift up from the bottom of the screen. -->
+    <div id="bloom" class="bloom" aria-hidden="true"></div>
+
+    <div id="toast" class="toast" hidden></div>
+
+    <script type="module" src="./app.js?v=14"></script>
+  </body>
+</html>
