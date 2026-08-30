@@ -97,13 +97,14 @@ class Room {
     }
   }
 
-  addPlayer(name) {
+  addPlayer(name, userId = null) {
     const taken = new Set(this.players.map((p) => p.seat));
     const seat = SEATS.find((s) => !taken.has(s)) ?? 0;
     const player = {
       id: `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
       name,
       seat,
+      userId,
       connected: true,
       lastSeen: Date.now(),
     };
@@ -151,6 +152,17 @@ class Room {
         present: this.players.some((p) => p.id === id),
       }))
       .sort((a, b) => b.filled - a.filled);
+  }
+
+  /** The shape stored for 'continue where you left off'. */
+  saveState() {
+    return {
+      difficulty: this.difficulty,
+      puzzle: this.puzzle,
+      solution: this.solution,
+      grid: this.grid,
+      elapsedMs: this.timeMs(),
+    };
   }
 
   isOwner(id) {
@@ -227,6 +239,7 @@ class Room {
         name: p.name,
         seat: p.seat,
         connected: p.connected,
+        signedIn: !!p.userId,
       })),
       chat: this.chat,
       timeMs: this.timeMs(),
@@ -242,6 +255,20 @@ class Room {
 export async function createRoom({ difficulty = 'hard' } = {}) {
   const puzzle = await takePuzzle(difficulty);
   const room = new Room(newCode(), puzzle);
+  rooms.set(room.code, room);
+  return room;
+}
+
+/** Rebuilds a room around a puzzle someone left unfinished. */
+export function createRoomFromSave(save) {
+  const room = new Room(newCode(), {
+    puzzle: save.puzzle,
+    solution: save.solution,
+    difficulty: save.difficulty,
+    level: 0,
+  });
+  room.grid = save.grid.slice();
+  room.elapsedMs = save.elapsedMs || 0;
   rooms.set(room.code, room);
   return room;
 }

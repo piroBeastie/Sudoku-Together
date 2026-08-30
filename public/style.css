@@ -19,6 +19,8 @@
   --line-soft: #dcd8cf;
   --line-strong: #16150f;
 
+  --clash-bg: #f3d3cd;
+  --clash-ink: #8f2d1d;
   --sel-fill: #ded9cf;
   --peer-fill: #eae7e0;
   --match-fill: #d5cfc2;
@@ -48,6 +50,8 @@
     --line-soft: #322f2b;
     --line-strong: #b9b5ac;
 
+    --clash-bg: #4d211a;
+    --clash-ink: #ff9c8b;
     --sel-fill: #34322e;
     --peer-fill: #201f1d;
     --match-fill: #423f3a;
@@ -1257,4 +1261,461 @@ button {
   .bloom {
     display: none;
   }
+}
+
+/* ============================================== accounts in the lobby ==== */
+
+.text-btn {
+  border: 0;
+  background: none;
+  padding: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.text-btn:hover {
+  color: var(--ink);
+}
+
+/* Solve counts, one column per difficulty. */
+.stat-row {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.stat-row li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 4px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+}
+
+.stat-row strong {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.stat-row span {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+}
+
+/* Continue carries a second line, so it is taller than a plain button. */
+.continue-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 9px;
+}
+
+.continue-btn small {
+  font-size: 11.5px;
+  font-weight: 500;
+  opacity: 0.72;
+}
+
+.auth-form {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-form input {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  outline: none;
+  font-size: 16px; /* 16px keeps iOS from zooming the page on focus */
+}
+
+.auth-form input:focus {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px var(--sel-fill);
+}
+
+
+/* Sign out sits in here — two deliberate taps away from an accidental one. */
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  min-width: 140px;
+  padding: 5px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  animation: menu-in 0.16s ease-out;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.menu-item:hover {
+  background: var(--sunken);
+}
+
+/* ===================================================== motion and polish == */
+
+/* Sliding highlight behind the difficulty options. */
+.segmented {
+  position: relative;
+  isolation: isolate;
+}
+
+.segmented::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 3);
+  border-radius: 7px;
+  background: var(--ink);
+  transform: translateX(calc(var(--seg, 2) * 100%));
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  z-index: -1;
+}
+
+.segmented button {
+  position: relative;
+  transition: color 0.22s ease;
+}
+
+/* The highlight is drawn by the track, so the button itself stays clear. */
+.segmented button[aria-checked='true'] {
+  background: transparent;
+  color: var(--paper);
+}
+
+.lobby-card,
+.greet-box,
+.stat-row,
+.continue-btn {
+  animation: settle 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.stage,
+.topbar {
+  animation: settle 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* A digit landing in a cell, and the clash state arriving. */
+.cell.pop {
+  animation: pop 0.22s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+
+@keyframes pop {
+  40% {
+    transform: scale(1.16);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* A number that cannot be right — it repeats in its row, column or box. */
+.cell.clash {
+  background: var(--clash-bg);
+  color: var(--clash-ink) !important;
+  font-weight: 600;
+  animation: clash-in 0.28s ease-out;
+}
+
+.cell.clash.selected {
+  box-shadow: inset 0 0 0 2px var(--clash-ink);
+}
+
+@keyframes clash-in {
+  0% {
+    background: var(--surface);
+  }
+  55% {
+    background: var(--clash-ink);
+    color: var(--paper);
+  }
+}
+
+.digit,
+.tool,
+.btn,
+.next-btn,
+.code-chip {
+  transition: transform 0.12s ease, background 0.18s ease, border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.tool:active,
+.next-btn:active,
+.code-chip:active {
+  transform: scale(0.96);
+}
+
+.stat-row li {
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.stat-row li:hover {
+  transform: translateY(-1px);
+  border-color: var(--ink);
+}
+
+/* ================================== the account badge, above the card ==== */
+
+.top-actions {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: 12px;
+  z-index: 60;
+}
+
+.account-btn {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.14s ease, box-shadow 0.18s ease;
+}
+
+.account-btn:hover {
+  transform: scale(1.06);
+  box-shadow: var(--shadow-md);
+}
+
+.account-btn:active {
+  transform: scale(0.94);
+}
+
+.account-btn .avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 13px;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 150px;
+  padding: 5px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  animation: menu-in 0.16s ease-out;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.97);
+  }
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.menu-item:hover {
+  background: var(--sunken);
+}
+
+/* ============================================= greeting, when signed in == */
+
+.greet-box {
+  margin-bottom: 18px;
+}
+
+.greet {
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.greet strong {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ================================================= the sign-in overlay === */
+
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 0.4);
+  backdrop-filter: blur(3px);
+  animation: fade-in 0.2s ease-out;
+}
+
+.auth-modal {
+  width: 100%;
+  max-width: 340px;
+  padding: 22px 20px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  animation: modal-in 0.24s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+
+.auth-modal h2 {
+  margin: 0 0 4px;
+  font-size: 19px;
+  letter-spacing: -0.01em;
+}
+
+.auth-sub {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.auth-modal .auth-form {
+  text-align: left;
+}
+
+.auth-modal .text-btn {
+  margin-top: 12px;
+}
+
+/* ================================= the two-mode sign-in panel =========== */
+
+#authSubmit {
+  width: 100%;
+  margin-top: 2px;
+}
+
+#authSubmit:disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Stated up front when creating an account, rather than after a rejection. */
+.auth-switch {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.auth-switch .text-btn {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+
+/* ============================= sign-in panel: close, fields, hints ====== */
+
+.auth-modal {
+  position: relative;
+}
+
+/* A cross in the corner, the usual place to look for it. */
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-size: 14px;
+  color: var(--faint);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal-close:hover {
+  background: var(--sunken);
+  color: var(--ink);
+}
+
+.auth-modal h2 {
+  padding: 0 28px; /* clear of the close button */
+}
+
+.field-group {
+  display: grid;
+  gap: 5px;
+}
+
+/* Each rule sits under the field it belongs to, left aligned with it. */
+.auth-hint {
+  margin: 0 0 2px 2px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--faint);
+  text-align: left;
+}
+
+.auth-switch {
+  margin: 14px 0 2px;
 }

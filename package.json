@@ -2,16 +2,27 @@
   "name": "sudoku-together",
   "version": "1.0.0",
   "private": true,
-  "description": "Two-player collaborative sudoku with chat",
+  "description": "Two-player collaborative sudoku with chat, accounts and stats",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "dev": "node --watch server/index.js"
+    "dev": "node --watch --env-file=.env server/index.js",
+    "test:db": "node test/db.js",
+    "test:game": "node test/e2e.js",
+    "test:accounts": "node test/accounts.js",
+    "test:latency": "node test/latency.js",
+    "start:local": "node --env-file=.env server/index.js"
   },
   "dependencies": {
     "express": "^4.19.2",
+    "pg": "^8.23.0",
     "ws": "^8.18.0"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8"
+  }
 }

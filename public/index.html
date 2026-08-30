@@ -18,7 +18,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./style.css?v=14" />
+    <link rel="stylesheet" href="./style.css?v=21" />
     <link
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%2316150f'/><text x='50' y='72' font-size='62' font-family='sans-serif' font-weight='700' fill='%23f1efea' text-anchor='middle'>9</text></svg>"
@@ -27,6 +27,16 @@
   <body>
     <!-- ============================================================ lobby -->
     <main id="lobby" class="lobby">
+      <!-- Account lives outside the card: a badge to sign in, nothing more. -->
+      <div class="top-actions" id="topActions">
+        <button id="accountBtn" class="account-btn" aria-label="Sign in" aria-expanded="false">
+          <span class="avatar" data-seat="0" id="accountInitial">?</span>
+        </button>
+        <div class="menu" id="accountMenu" hidden>
+          <button id="signOutBtn" class="menu-item">Sign out</button>
+        </div>
+      </div>
+
       <div class="lobby-card">
         <header class="lobby-head">
           <div class="logo" aria-hidden="true">
@@ -36,7 +46,14 @@
           <p class="tagline">One grid, two players.</p>
         </header>
 
-        <label class="field">
+        <!-- Signed in: a greeting and your record, in place of the name field. -->
+        <section id="greetBox" class="greet-box" hidden>
+          <p class="greet">Hey, <strong id="greetName"></strong></p>
+          <ul class="stat-row" id="statRow"></ul>
+        </section>
+
+        <!-- Guest: a name is all it takes. -->
+        <label class="field" id="nameField">
           <span class="field-label">Your name</span>
           <input
             id="nameInput"
@@ -48,6 +65,12 @@
             spellcheck="false"
           />
         </label>
+
+        <!-- Where you left off comes before starting something new. -->
+        <button id="continueBtn" class="btn btn-primary continue-btn" hidden>
+          <span>Continue last puzzle</span>
+          <small id="continueDetail"></small>
+        </button>
 
         <div class="field">
           <span class="field-label">Difficulty</span>
@@ -80,6 +103,58 @@
         </form>
 
         <p id="lobbyError" class="lobby-error" role="alert" hidden></p>
+      </div>
+
+      <!-- Signing in happens over the lobby, not inside it. -->
+      <div id="authOverlay" class="auth-overlay" hidden>
+        <!-- One panel, two modes: the title, hint, button and autocomplete all
+             switch, so it is never ambiguous which job it is doing. -->
+        <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+          <button type="button" id="authCloseBtn" class="modal-close" aria-label="Close">✕</button>
+
+          <h2 id="authTitle">Sign in</h2>
+          <p class="auth-sub" id="authSub">Pick up your stats and unfinished puzzles.</p>
+
+          <form id="authForm" class="auth-form">
+            <!-- Each rule sits under the field it applies to. -->
+            <div class="field-group">
+              <input
+                id="authUser"
+                type="text"
+                maxlength="16"
+                placeholder="Username"
+                autocomplete="username"
+                spellcheck="false"
+                aria-label="Username"
+                aria-describedby="authUserHint"
+              />
+              <p class="auth-hint" id="authUserHint" hidden>
+                3–16 letters, numbers or underscores
+              </p>
+            </div>
+
+            <div class="field-group">
+              <input
+                id="authPass"
+                type="password"
+                maxlength="72"
+                placeholder="Password"
+                autocomplete="current-password"
+                aria-label="Password"
+                aria-describedby="authPassHint"
+              />
+              <p class="auth-hint" id="authPassHint" hidden>At least 6 characters</p>
+            </div>
+
+            <button type="submit" id="authSubmit" class="btn btn-primary">Sign in</button>
+          </form>
+
+          <p id="authError" class="lobby-error" role="alert" hidden></p>
+
+          <p class="auth-switch">
+            <button type="button" id="authSwitchBtn" class="text-btn">Create an account</button>
+          </p>
+        </div>
       </div>
     </main>
 
@@ -172,6 +247,6 @@
 
     <div id="toast" class="toast" hidden></div>
 
-    <script type="module" src="./app.js?v=14"></script>
+    <script type="module" src="./app.js?v=21"></script>
   </body>
 </html>
