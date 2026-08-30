@@ -14,3 +14,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Prompted for on first deploy rather than committed. Without it the app
+      # still runs, just guest-only with no accounts or saved puzzles.
+      - key: DATABASE_URL
+        sync: false
